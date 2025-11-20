@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Service Agreements – Sweden (Peach Theme)</title>
+
+  <!-- Robust CSV parsing (quoted commas, etc.) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js" defer></script>
+
+  <style>
+    :root{
+      /* Dark/glassy base (same structure as before) */
+      --bg: #0b1220;
+      --card: #0f172a;
+      --surface: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+
+      /* 🔶 Pastel peach accents (replaces blue/cyan) */
+      --accent: #FEC5BB;     /* soft peach */
+      --accent-2: #FFD6A5;   /* apricot */
+      --accent-text: #3b1f18;/* dark text over peach gradients */
+
+      --good: #10b981;
+      --bad: #ef4444;
+      --chip: #1f2937;
+      --shadow: 0 8px 24px rgba(0,0,0,.25);
+      --radius: 12px;
+
+      /* Links in peach range */
+      --link: #ffd6a5;
+      --link-hover: #ffe3c4;
+
+      /* Subtle header glow */
+      --thead-grad-a: rgba(254,197,187,.18);
+      --thead-grad-b: rgba(255,214,165,.14);
+    }
+
+    * { box-sizing: border-box; }
+    body{
+      margin:0; background: var(--bg); color: var(--text);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Inter, "Helvetica Neue", Arial, "Noto Sans";
+      line-height:1.45;
+    }
+    .wrap{ max-width: 1400px; margin: 40px auto; padding: 0 20px; }
+
+    header{
+      display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom: 18px;
+    }
+    header h1{
+      margin:0; font-size: clamp(1.2rem, 2vw, 1.6rem); font-weight:800; letter-spacing:.2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .status{ color: var(--muted); font-size:.95rem; }
+
+    /* Controls */
+    .toolbar{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px;
+    }
+    .toolbar .group{
+      display:flex; gap:8px; flex-wrap:wrap;
+      background: var(--card); border:1px solid var(--border); border-radius: var(--radius); padding:10px;
+      box-shadow: var(--shadow);
+    }
+    .toolbar input[type="search"], .toolbar select{
+      appearance:none; border:1px solid var(--border); background: var(--surface); color:var(--text);
+      padding:10px 12px; border-radius:10px; outline:none; min-width: 200px;
+    }
+    .btn{
+      border:1px solid var(--border);
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      color: var(--accent-text); font-weight:800; padding:10px 14px; border-radius:10px; cursor:pointer;
+      text-transform: uppercase; letter-spacing:.02em;
+      box-shadow: 0 4px 0 rgba(0,0,0,.18), 0 10px 18px rgba(0,0,0,.18);
+      transform: translateY(0);
+      transition: transform .08s ease, box-shadow .12s ease, filter .12s;
+    }
+    .btn:hover{ filter: saturate(1.05); }
+    .btn:active{ transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.18), 0 6px 12px rgba(0,0,0,.18); }
+    .btn.secondary{ background: var(--chip); color: var(--text); }
+
+    /* Table card */
+    .table-card{
+      background: var(--card); border:1px solid var(--border); border-radius: var(--radius);
+      box-shadow: var(--shadow); overflow:hidden;
+    }
+    .table-scroll{ overflow:auto; max-height: 75vh; }
+
+    table{
+      width:100%; border-collapse: separate; border-spacing:0; min-width: 1000px;
+    }
+    thead th{
+      position: sticky; top:0; z-index:2;
+      background: linear-gradient(180deg, var(--thead-grad-a), var(--thead-grad-b));
+      backdrop-filter: blur(6px);
+      border-bottom:1px solid var(--border);
+      text-align:left; font-weight:800; padding:12px 12px; white-space:nowrap; color:#fff;
+    }
+    thead th button{
+      all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    }
+    th .sort{
+      display:inline-block; min-width: 1.1em; text-align:center; color:var(--muted);
+      font-size: .95em; opacity: .8;
+    }
+    th[data-sort="none"] .sort::before{ content:"↕"; }
+    th[data-sort="asc"] .sort::before{ content:"▲"; }
+    th[data-sort="desc"] .sort::before{ content:"▼"; }
+
+    tbody td{
+      border-bottom:1px solid var(--border); padding:12px; vertical-align: top;
+    }
+    tbody tr:nth-child(odd){ background: rgba(255,255,255,.02); }
+    tbody tr:hover{ background: rgba(254,197,187,.10); }
+
+    .badge{
+      display:inline-block; padding:4px 8px; border-radius:999px; font-size:.85rem; font-weight:700;
+      background: var(--chip); color: var(--text);
+    }
+    .badge.good{ background: rgba(16,185,129,.18); color:#a7f3d0; border:1px solid rgba(16,185,129,.35); }
+    .badge.bad{ background: rgba(239,68,68,.18); color:#fecaca; border:1px solid rgba(239,68,68,.35); }
+
+    .source a{
+      color: var(--link); text-decoration: none; border-bottom: 1px dashed rgba(255,214,165,.7);
+    }
+    .source a:hover{ color: var(--link-hover); border-bottom-color: var(--link-hover); }
+
+    footer{ color: var(--muted); font-size:.9rem; padding: 14px 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Service Agreements – Sweden</h1>
+      <div class="status" id="status">Loading…</div>
+    </header>
+
+    <div class="toolbar">
+      <div class="group">
+        <input id="q" type="search" placeholder="Sök i alla kolumner…" aria-label="Search" />
+        <select id="brandFilter" aria-label="Brand filter">
+          <option value="">Brand: All</option>
+        </select>
+        <select id="pclcvFilter" aria-label="PC/LCV filter">
+          <option value="">PC/LCV: All</option>
+          <option>PC</option>
+          <option>LCV</option>
+        </select>
+        <select id="buyerFilter" aria-label="Consumer/B2B filter">
+          <option value="">Buyer: All</option>
+          <option>Consumer</option>
+          <option>B2B</option>
+          <option>Consumer & B2B</option>
+        </select>
+        <select id="metricFilter" aria-label="Price metric filter">
+          <option value="">Price metric: All</option>
+          <option>kr/mån</option>
+          <option>kr/mil</option>
+        </select>
+      </div>
+      <div class="group">
+        <button class="btn" id="reloadBtn" type="button">Reload CSV</button>
+        <a id="openCsv" class="btn secondary" target="_blank" rel="noopener">Open CSV</a>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-scroll">
+        <table id="dataTable" aria-live="polite">
+          <thead id="thead"></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <footer id="footerNote"></footer>
+  </div>
+
+  <script>
+    // --- Config --------------------------------------------------------------
+    const DEFAULT_CSV_URL =
+      "https://raw.githubusercontent.com/jakobtivell-cpu/kampanjradar/main/service_agreements_sweden.csv";
+    const urlParam = new URLSearchParams(location.search).get("csv");
+    const CSV_URL = urlParam || DEFAULT_CSV_URL;
+
+    // --- State ---------------------------------------------------------------
+    let rawRows = [];
+    let viewRows = [];
+    let headers = [];
+    let sortState = { col: null, dir: "none" }; // "asc" | "desc" | "none"
+
+    // --- Elements ------------------------------------------------------------
+    const $status = document.getElementById("status");
+    const $thead = document.getElementById("thead");
+    const $tbody = document.getElementById("tbody");
+    const $openCsv = document.getElementById("openCsv");
+    const $reload = document.getElementById("reloadBtn");
+    const $footer = document.getElementById("footerNote");
+
+    const $q = document.getElementById("q");
+    const $brand = document.getElementById("brandFilter");
+    const $pclcv = document.getElementById("pclcvFilter");
+    const $buyer = document.getElementById("buyerFilter");
+    const $metric = document.getElementById("metricFilter");
+
+    $openCsv.href = CSV_URL;
+
+    // --- Utils ---------------------------------------------------------------
+    const isUrl = (v) => typeof v === "string" && /^https?:\/\//i.test(String(v).trim());
+    const trimOrEmpty = (v) => (v == null ? "" : String(v).trim());
+    function setStatus(msg){ $status.textContent = msg; }
+
+    function badgeYesNo(value) {
+      const v = trimOrEmpty(value).toLowerCase();
+      const span = document.createElement("span");
+      span.className = "badge " + (v === "yes" ? "good" : "bad");
+      span.textContent = v === "yes" ? "Yes" : "No";
+      return span;
+    }
+
+    function buildSourceCell(value) {
+      const td = document.createElement("td");
+      td.className = "source";
+      const v = trimOrEmpty(value);
+      if (isUrl(v)) {
+        const a = document.createElement("a");
+        a.href = v; a.target = "_blank"; a.rel = "noopener"; a.textContent = v;
+        td.appendChild(a);
+      } else if (v && v.toLowerCase() !== "no source" && v !== "–" && v !== "-") {
+        const span = document.createElement("span");
+        span.textContent = v;
+        td.appendChild(span);
+      } else {
+        const m = document.createElement("span");
+        m.className = "muted";
+        m.textContent = "no source";
+        td.appendChild(m);
+      }
+      return td;
+    }
+
+    function normalizeRow(row) {
+      const cleaned = {};
+      headers.forEach(h => { cleaned[h] = trimOrEmpty(row[h]); });
+      // Standardize VAT incl to Yes/No
+      const vatKey = headers.find(h => h.toLowerCase().includes("vat"));
+      if (vatKey && cleaned[vatKey]) {
+        const v = cleaned[vatKey].toLowerCase();
+        cleaned[vatKey] = (v === "ja" || v === "yes") ? "Yes"
+                        : (v === "nej" || v === "no") ? "No"
+                        : cleaned[vatKey];
+      }
+      return cleaned;
+    }
+
+    // --- Render --------------------------------------------------------------
+    function renderHeader() {
+      const tr = document.createElement("tr");
+      headers.forEach((h, idx) => {
+        const th = document.createElement("th");
+        th.dataset.col = idx;
+        th.dataset.sort = (sortState.col === idx ? sortState.dir : "none");
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        const label = document.createElement("span");
+        label.textContent = h;
+        const sortIcon = document.createElement("span");
+        sortIcon.className = "sort";
+        btn.appendChild(label);
+        btn.appendChild(sortIcon);
+
+        btn.addEventListener("click", () => {
+          if (sortState.col !== idx) { sortState.col = idx; sortState.dir = "asc"; }
+          else { sortState.dir = sortState.dir === "asc" ? "desc" : sortState.dir === "desc" ? "none" : "asc"; }
+          render(); // re-render with new sort
+        });
+
+        th.appendChild(btn);
+        tr.appendChild(th);
+      });
+      $thead.innerHTML = ""; $thead.appendChild(tr);
+    }
+
+    function renderBody(rows) {
+      $tbody.innerHTML = "";
+      const srcIndex = headers.findIndex(h => h.toLowerCase() === "source");
+      for (const r of rows) {
+        const tr = document.createElement("tr");
+        headers.forEach((h, idx) => {
+          if (idx === srcIndex) { tr.appendChild(buildSourceCell(r[h])); return; }
+          const td = document.createElement("td");
+          if (h.toLowerCase().includes("vat")) td.appendChild(badgeYesNo(r[h]));
+          else td.textContent = r[h];
+          tr.appendChild(td);
+        });
+        $tbody.appendChild(tr);
+      }
+    }
+
+    function populateBrandFilter(rows) {
+      const list = Array.from(new Set(rows.map(r => trimOrEmpty(r["Brand"])).filter(Boolean)))
+        .sort((a,b)=>a.localeCompare(b,"sv"));
+      $brand.innerHTML = '<option value="">Brand: All</option>' + list.map(b => `<option>${b}</option>`).join("");
+    }
+
+    function applyFilters() {
+      const q = $q.value.trim().toLowerCase();
+      const brand = $brand.value;
+      const pclcv = $pclcv.value;
+      const buyer = $buyer.value;
+      const metric = $metric.value;
+
+      let rows = rawRows;
+
+      if (brand) rows = rows.filter(r => trimOrEmpty(r["Brand"]).toLowerCase() === brand.toLowerCase());
+      if (pclcv) {
+        const key = headers.find(h => h.toLowerCase().includes("pc/lcv"));
+        if (key) rows = rows.filter(r => trimOrEmpty(r[key]).toLowerCase() === pclcv.toLowerCase());
+      }
+      if (buyer) {
+        const key = headers.find(h => h.toLowerCase().includes("consumer/b2b"));
+        if (key) rows = rows.filter(r => trimOrEmpty(r[key]).toLowerCase() === buyer.toLowerCase());
+      }
+      if (metric) {
+        const key = headers.find(h => h.toLowerCase().includes("price metric"));
+        if (key) rows = rows.filter(r => trimOrEmpty(r[key]).toLowerCase() === metric.toLowerCase());
+      }
+      if (q) {
+        rows = rows.filter(r => headers.some(h => String(r[h]).toLowerCase().includes(q)));
+      }
+      return rows;
+    }
+
+    function applySort(rows) {
+      const { col, dir } = sortState;
+      if (col == null || dir === "none") return rows;
+
+      const key = headers[col];
+      const numLike = (v) => {
+        if (v == null) return NaN;
+        const s = String(v).replace(/\s+/g, "").replace(",", ".").replace(/[^\d.-]/g, "");
+        return Number(s);
+      };
+      const sorted = [...rows].sort((a,b) => {
+        const an = numLike(a[key]), bn = numLike(b[key]);
+        if (!Number.isNaN(an) && !Number.isNaN(bn)) return dir === "asc" ? an - bn : bn - an;
+        const res = String(a[key]).localeCompare(String(b[key]), "sv", { numeric:true, sensitivity:"base" });
+        return dir === "asc" ? res : -res;
+      });
+      return sorted;
+    }
+
+    function render() {
+      renderHeader();
+      const filtered = applyFilters();
+      viewRows = applySort(filtered);
+      renderBody(viewRows);
+      setStatus(`${viewRows.length} rows shown • ${rawRows.length} total`);
+    }
+
+    // --- Load CSV ------------------------------------------------------------
+    async function loadCsv() {
+      setStatus("Loading CSV…");
+      $openCsv.href = CSV_URL;
+      $footer.textContent = "";
+      return new Promise((resolve, reject) => {
+        Papa.parse(CSV_URL, {
+          download: true,
+          header: true,
+          skipEmptyLines: "greedy",
+          dynamicTyping: false,
+          complete: (results) => {
+            try{
+              const rows = (results.data || []).filter(r => Object.values(r).some(v => trimOrEmpty(v) !== ""));
+              if (!rows.length) throw new Error("CSV appears to be empty.");
+              headers = Object.keys(rows[0]);
+              rawRows = rows.map(normalizeRow);
+              populateBrandFilter(rawRows);
+              render();
+              $footer.textContent = `Source CSV: ${CSV_URL}`;
+              resolve();
+            }catch(err){ reject(err); }
+          },
+          error: (err) => reject(err)
+        });
+      });
+    }
+
+    // --- Events --------------------------------------------------------------
+    document.getElementById("reloadBtn").addEventListener("click", () => {
+      loadCsv().catch(e => setStatus("Error: " + e.message));
+    });
+    document.getElementById("q").addEventListener("input", render);
+    document.getElementById("brandFilter").addEventListener("change", render);
+    document.getElementById("pclcvFilter").addEventListener("change", render);
+    document.getElementById("buyerFilter").addEventListener("change", render);
+    document.getElementById("metricFilter").addEventListener("change", render);
+
+    // --- Init ---------------------------------------------------------------
+    window.addEventListener("DOMContentLoaded", () => {
+      loadCsv().catch(err => {
+        console.error(err);
+        setStatus("Failed to load CSV. Check console and CSV_URL.");
+        $footer.textContent = `Failed to load: ${CSV_URL}`;
+      });
+    });
+  </script>
+</body>
+</html>
